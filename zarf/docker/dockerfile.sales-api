@@ -1,0 +1,39 @@
+# Build the Go Binary.
+FROM golang:1.17 as build_sales-api
+
+# make sure binary is not binding to anything on golang base image
+ENV CGO_ENABLED 0
+
+# arguments - build reference. Defined in makefile as VERSION
+ARG BUILD_REF
+
+# Copy the source code
+COPY . /service
+
+# Build the admin binary.
+WORKDIR /service/app/tooling/admin
+RUN go build -ldflags "-X main.build=${BUILD_REF}"
+
+# set the working directory.
+WORKDIR /service/app/services/sales-api
+
+# Build the binary
+# Binary will be created with the name sales-api because it will be in sales-api directory
+RUN go build -ldflags "-X main.build=${BUILD_REF}"
+
+# Run the Go Binary in Alpine (final image).
+FROM alpine:3.14
+ARG BUILD_DATE
+ARG BUILD_REF
+COPY --from=build_sales-api /service/zarf/keys/. /service/zarf/keys/.
+COPY --from=build_sales-api /service/app/tooling/admin/admin /service/admin
+COPY --from=build_sales-api /service/app/services/sales-api/sales-api /service/sales-api
+WORKDIR /service
+CMD ["./sales-api"]
+
+LABEL org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.title="sales-api" \
+      org.opencontainers.image.authors="Piyush Saurabh <piyush-saurabh>" \
+      org.opencontainers.image.source="https://github.com/pisaurabh/" \
+      org.opencontainers.image.revision="${BUILD_REF}" \
+      org.opencontainers.image.vendor="Rogue Security"

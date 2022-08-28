@@ -1,0 +1,6 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Load the config files in kustomization
+resources:
+  - ./kind-database-config.yaml
+  - ./kind-database.yaml
